@@ -538,16 +538,29 @@ def calculate_calibration_local(self, entity_id) -> float | None:
         )
 
         if _within_tolerance:
-            # When within tolerance, don't adjust calibration but keep MPC/TPI/PID valve data fresh
-            if _calibration_mode == CalibrationMode.MPC_CALIBRATION:
-                _compute_mpc_balance(self, entity_id)
-            elif _calibration_mode == CalibrationMode.TPI_CALIBRATION:
-                _compute_tpi_balance(self, entity_id)
-            elif _calibration_mode == CalibrationMode.PID_CALIBRATION:
-                _compute_pid_balance(self, entity_id)
+            if _calibration_mode in (
+                CalibrationMode.MPC_CALIBRATION,
+                CalibrationMode.TPI_CALIBRATION,
+                CalibrationMode.PID_CALIBRATION,
+            ):
+                # Predictive controllers handle the tolerance zone
+                # themselves.  Do NOT freeze calibration — let the
+                # controller output ramp down smoothly to prevent
+                # overshoot on non-valve TRVs.
+                _LOGGER.debug(
+                    "better_thermostat %s: %s - within tolerance (ext=%.2f, target=%.2f, tol=%.2f), "
+                    "letting %s controller ramp down instead of freezing calibration",
+                    self.device_name,
+                    entity_id,
+                    _cur_external_temp,
+                    _cur_target_temp,
+                    self.tolerance,
+                    _calibration_mode,
+                )
+                pass  # fall through to full calibration computation
             else:
                 self.real_trvs[entity_id].pop("calibration_balance", None)
-            return self.real_trvs[entity_id]["last_calibration"]
+                return self.real_trvs[entity_id]["last_calibration"]
 
     _cur_trv_temp_s = self.real_trvs[entity_id]["current_temperature"]
     _calibration_step = self.real_trvs[entity_id]["local_calibration_step"]
