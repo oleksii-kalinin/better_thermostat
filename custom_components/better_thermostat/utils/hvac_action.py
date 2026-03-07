@@ -91,6 +91,7 @@ def compute_hvac_action(
     ignore_states: bool,
     trv_snapshots: list[TrvSnapshot],
     device_name: str = "",
+    call_for_heat: bool | None = None,
 ) -> HvacActionResult:
     """Compute the current HVAC action without mutating *hysteresis*.
 
@@ -128,6 +129,18 @@ def compute_hvac_action(
             new_hold_active=False,
         )
 
+    if call_for_heat is False:
+        _LOGGER.debug(
+            "better_thermostat %s: tolerance_action: IDLE (call_for_heat=False)",
+            device_name,
+        )
+        return HvacActionResult(
+            action=HVACAction.IDLE,
+            tolerance_decision=HVACAction.IDLE,
+            new_last_action=HVACAction.IDLE,
+            new_hold_active=False,
+        )
+
     # Tolerance-based heating decision
     heating_allowed = hvac_mode in (HVACMode.HEAT, HVACMode.HEAT_COOL)
     action = HVACAction.IDLE
@@ -152,7 +165,15 @@ def compute_hvac_action(
 
     # TRV override: if base decision is IDLE but any TRV is active, show HEATING
     if action == HVACAction.IDLE:
-        if ignore_states or window_open:
+        if ignore_states or window_open or tolerance_hold:
+            _LOGGER.debug(
+                "better_thermostat %s: tolerance_action: suppressing TRV heating override "
+                "(ignore_states=%s, window_open=%s, tolerance_hold=%s)",
+                device_name,
+                ignore_states,
+                window_open,
+                tolerance_hold,
+            )
             return HvacActionResult(
                 action=HVACAction.IDLE,
                 tolerance_decision=tolerance_decision,
