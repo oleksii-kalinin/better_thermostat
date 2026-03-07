@@ -2474,6 +2474,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             ignore_states=self.ignore_states,
             trv_snapshots=self._build_trv_snapshots(),
             device_name=self.device_name,
+            call_for_heat=self.call_for_heat,
         )
 
     def _commit_hvac_action(self, result) -> None:
