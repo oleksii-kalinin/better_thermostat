@@ -738,7 +738,7 @@ async def find_local_calibration_entity(self, entity_id):
                 "temperature_calibration" in descriptor
                 or "temperature_offset" in descriptor
                 or "temperatur_offset" in descriptor
-                or "local_temperature" in descriptor
+                or "local_temperature_calibration" in descriptor
             ):
                 _LOGGER.debug(
                     "better thermostat: Found local calibration entity %s for %s (string match)",
@@ -746,6 +746,7 @@ async def find_local_calibration_entity(self, entity_id):
                     entity_id,
                 )
                 calibration_entity = entity.entity_id
+                break
 
     if calibration_entity is None:
         _LOGGER.debug(
