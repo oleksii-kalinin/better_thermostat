@@ -2955,8 +2955,10 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             return HVACAction.IDLE
         if self.call_for_heat is False:
             _LOGGER.debug(
-                "better_thermostat %s: tolerance_action: IDLE (call_for_heat=False)",
+                "better_thermostat %s: tolerance_action: IDLE (call_for_heat=False, cur=%.1f, target=%s)",
                 self.device_name,
+                self.cur_temp,
+                self.bt_target_temp,
             )
             self._tolerance_hold_active = False
             self._tolerance_last_action = HVACAction.IDLE
@@ -2999,11 +3001,14 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                 if self.ignore_states or self.window_open or tolerance_hold:
                     _LOGGER.debug(
                         "better_thermostat %s: tolerance_action: suppressing TRV heating override "
-                        "(ignore_states=%s, window_open=%s, tolerance_hold=%s)",
+                        "(ignore_states=%s, window_open=%s, tolerance_hold=%s, cur=%.1f, target=%s, tol=%.1f)",
                         self.device_name,
                         self.ignore_states,
                         self.window_open,
                         tolerance_hold,
+                        self.cur_temp,
+                        self.bt_target_temp,
+                        tol,
                     )
                     self._tolerance_last_action = HVACAction.IDLE
                     self._tolerance_hold_active = tolerance_hold
