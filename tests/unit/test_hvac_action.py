@@ -208,21 +208,27 @@ class TestComputeHvacAction:
     # --- TRV override ------------------------------------------------------
 
     def test_trv_hvac_action_override(self):
-        """Test Trv hvac action override."""
+        """Test Trv hvac action override when below tolerance band."""
         snap = TrvSnapshot(trv_id="trv1", hvac_action="heating")
-        r = compute_hvac_action(**_default_kwargs(cur_temp=20.7, trv_snapshots=[snap]))
+        r = compute_hvac_action(**_default_kwargs(cur_temp=20.0, trv_snapshots=[snap]))
         assert r.action == HVACAction.HEATING
 
-    def test_trv_valve_position_override(self):
-        """Test Trv valve position override."""
-        snap = TrvSnapshot(trv_id="trv1", valve_position=0.5)
+    def test_trv_hvac_action_override_suppressed_at_target(self):
+        """TRV reports heating but within tolerance band → suppressed."""
+        snap = TrvSnapshot(trv_id="trv1", hvac_action="heating")
         r = compute_hvac_action(**_default_kwargs(cur_temp=20.7, trv_snapshots=[snap]))
+        assert r.action == HVACAction.IDLE
+
+    def test_trv_valve_position_override(self):
+        """Test Trv valve position override when below tolerance band."""
+        snap = TrvSnapshot(trv_id="trv1", valve_position=0.5)
+        r = compute_hvac_action(**_default_kwargs(cur_temp=20.0, trv_snapshots=[snap]))
         assert r.action == HVACAction.HEATING
 
     def test_trv_last_valve_percent_override(self):
-        """Test Trv last valve percent override."""
+        """Test Trv last valve percent override when below tolerance band."""
         snap = TrvSnapshot(trv_id="trv1", last_valve_percent=30.0)
-        r = compute_hvac_action(**_default_kwargs(cur_temp=20.7, trv_snapshots=[snap]))
+        r = compute_hvac_action(**_default_kwargs(cur_temp=20.0, trv_snapshots=[snap]))
         assert r.action == HVACAction.HEATING
 
     def test_ignore_states_skips_trv_override(self):
@@ -270,15 +276,15 @@ class TestHysteresisTransitions:
     """Tests for hysteresis transitions."""
 
     def test_tolerance_decision_not_corrupted_by_trv(self):
-        """TRV override must not change tolerance_decision."""
+        """TRV override suppressed when tolerance_hold is active at target."""
         hyst = ToleranceHysteresis(last_action=HVACAction.HEATING)
         snap = TrvSnapshot(trv_id="trv1", hvac_action="heating")
         r = compute_hvac_action(
             **_default_kwargs(hysteresis=hyst, cur_temp=21.0, trv_snapshots=[snap])
         )
-        # Tolerance says IDLE (at target), TRV overrides to HEATING
+        # Tolerance says IDLE (at target), TRV override is suppressed by tolerance_hold
         assert r.tolerance_decision == HVACAction.IDLE
-        assert r.action == HVACAction.HEATING
+        assert r.action == HVACAction.IDLE
         # Hysteresis state follows tolerance, not TRV
         assert r.new_last_action == HVACAction.IDLE
 
