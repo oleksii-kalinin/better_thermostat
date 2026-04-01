@@ -2397,6 +2397,15 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
     def hvac_action(self):
         """Return the current HVAC action."""
         if self.attr_hvac_action is not None:
+            # When tolerance hold is active the live computation (IDLE) must
+            # override a stale cached HEATING — the cache is only refreshed
+            # when the control-loop runs, which may lag behind temperature
+            # updates that already moved past the target.
+            if (
+                self.attr_hvac_action == HVACAction.HEATING
+                and self._hysteresis.hold_active
+            ):
+                return self._compute_hvac_action_pure().action
             return self.attr_hvac_action
         return self._compute_hvac_action_pure().action
 
