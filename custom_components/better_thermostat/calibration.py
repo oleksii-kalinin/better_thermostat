@@ -527,29 +527,48 @@ def calculate_calibration_local(self, entity_id) -> float | None:
         )
 
         if _within_tolerance:
-            if _calibration_mode in (
-                CalibrationMode.MPC_CALIBRATION,
-                CalibrationMode.TPI_CALIBRATION,
-                CalibrationMode.PID_CALIBRATION,
-            ):
-                # Predictive controllers handle the tolerance zone
-                # themselves.  Do NOT freeze calibration — let the
-                # controller output ramp down smoothly to prevent
-                # overshoot on non-valve TRVs.
-                _LOGGER.debug(
-                    "better_thermostat %s: %s - within tolerance (ext=%.2f, target=%.2f, tol=%.2f), "
-                    "letting %s controller ramp down instead of freezing calibration",
-                    self.device_name,
-                    entity_id,
-                    _cur_external_temp,
-                    _cur_target_temp,
-                    self.tolerance,
-                    _calibration_mode,
-                )
-                pass  # fall through to full calibration computation
+            # When within tolerance, don't adjust calibration but keep MPC/TPI/PID valve data fresh
+            if _calibration_mode == CalibrationMode.MPC_CALIBRATION:
+                _compute_mpc_balance(self, entity_id)
+            elif _calibration_mode == CalibrationMode.TPI_CALIBRATION:
+                _compute_tpi_balance(self, entity_id)
+            elif _calibration_mode == CalibrationMode.PID_CALIBRATION:
+                _compute_pid_balance(self, entity_id)
             else:
                 self.real_trvs[entity_id].pop("calibration_balance", None)
-                return self.real_trvs[entity_id]["last_calibration"]
+            _LOGGER.debug(
+                "better_thermostat %s: %s - within tolerance (ext=%.2f, target=%.2f, tol=%.2f), "
+                "returning neutral calibration",
+                self.device_name,
+                entity_id,
+                _cur_external_temp,
+                _cur_target_temp,
+                self.tolerance,
+            )
+            # Return calibration that makes TRV see external temp.
+            # Since ext is near target, the TRV will close its valve.
+            _cur_trv_temp_f = _convert_to_float(
+                self.real_trvs[entity_id]["current_temperature"]
+            )
+            _current_trv_calibration = _convert_to_float(
+                self.real_trvs[entity_id]["last_calibration"]
+            )
+            _calibration_step = _convert_to_float(
+                self.real_trvs[entity_id]["local_calibration_step"]
+            )
+            if (
+                _cur_trv_temp_f is not None
+                and _current_trv_calibration is not None
+                and _calibration_step is not None
+            ):
+                _neutral = (
+                    (_cur_external_temp - float(_cur_trv_temp_f))
+                    + float(_current_trv_calibration)
+                )
+                _rounded = round_by_step(_neutral, float(_calibration_step))
+                if _rounded is not None:
+                    return _rounded
+            return self.real_trvs[entity_id]["last_calibration"]
 
     _cur_trv_temp_s = self.real_trvs[entity_id]["current_temperature"]
     _calibration_step = self.real_trvs[entity_id]["local_calibration_step"]
