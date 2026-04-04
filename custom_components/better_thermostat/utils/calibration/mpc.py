@@ -1791,7 +1791,11 @@ def _post_process_percent(
     last_percent = state.last_percent
     du_max = getattr(params, "mpc_du_max_pct", None)
 
-    if last_percent is not None and du_max is not None and du_max > 0:
+    # Bypass du_max when tolerance hold forces the valve closed – the TRV
+    # must shut immediately, not ramp down 25 % per cycle.
+    bypass_du_max = state.tolerance_hold_active and raw_percent == 0.0
+
+    if last_percent is not None and du_max is not None and du_max > 0 and not bypass_du_max:
         delta = smooth - last_percent
         if abs(delta) > du_max:
             limited = last_percent + du_max * (1 if delta > 0 else -1)
@@ -1810,7 +1814,10 @@ def _post_process_percent(
     # ============================================================
     if last_percent is not None:
         change = abs(smooth - last_percent)
-        if (change < params.percent_hysteresis_pts and not target_changed) or too_soon:
+        if bypass_du_max:
+            # Tolerance hold: force immediate valve close, skip hysteresis/rate gate.
+            percent_out = int(round(smooth))
+        elif (change < params.percent_hysteresis_pts and not target_changed) or too_soon:
             percent_out = int(round(last_percent))
         else:
             percent_out = int(round(smooth))
