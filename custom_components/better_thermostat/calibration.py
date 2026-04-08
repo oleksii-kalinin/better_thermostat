@@ -626,14 +626,16 @@ def calculate_calibration_local(self, entity_id) -> float | None:
                     _desired_trv_setpoint = _cur_trv_temp_f + (
                         (float(_max_temp) - _cur_trv_temp_f) * _valve_fraction
                     )
-                    if (
-                        _valve_fraction == 0.0
-                        and _desired_trv_setpoint >= _cur_trv_temp_f
-                    ):
-                        _desired_trv_setpoint = _cur_trv_temp_f - 1.0
-                    _new_trv_calibration = _current_trv_calibration - (
-                        _desired_trv_setpoint - _cur_target_temp
-                    )
+                    if _valve_fraction == 0.0:
+                        # TRV must perceive room >= target to close.
+                        # calibration = target - trv_temp + margin
+                        _new_trv_calibration = (
+                            _cur_target_temp - _cur_trv_temp_f + _calibration_step
+                        )
+                    else:
+                        _new_trv_calibration = _current_trv_calibration - (
+                            _desired_trv_setpoint - _cur_target_temp
+                        )
     elif _calibration_mode == CalibrationMode.TPI_CALIBRATION:
         _tpi_result, _tpi_use_valve = _compute_tpi_balance(self, entity_id)
         if _tpi_use_valve:
@@ -647,14 +649,14 @@ def calculate_calibration_local(self, entity_id) -> float | None:
                     _desired_trv_setpoint = _cur_trv_temp_f + (
                         (float(_max_temp) - _cur_trv_temp_f) * _valve_fraction
                     )
-                    if (
-                        _valve_fraction == 0.0
-                        and _desired_trv_setpoint >= _cur_trv_temp_f
-                    ):
-                        _desired_trv_setpoint = _cur_trv_temp_f - 1.0
-                    _new_trv_calibration = _current_trv_calibration - (
-                        _desired_trv_setpoint - _cur_target_temp
-                    )
+                    if _valve_fraction == 0.0:
+                        _new_trv_calibration = (
+                            _cur_target_temp - _cur_trv_temp_f + _calibration_step
+                        )
+                    else:
+                        _new_trv_calibration = _current_trv_calibration - (
+                            _desired_trv_setpoint - _cur_target_temp
+                        )
     elif _calibration_mode == CalibrationMode.PID_CALIBRATION:
         _pid_result, _pid_use_valve = _compute_pid_balance(self, entity_id)
         if _pid_use_valve:
@@ -668,13 +670,13 @@ def calculate_calibration_local(self, entity_id) -> float | None:
                     _desired_trv_setpoint = _cur_trv_temp_f + (
                         (float(_max_temp) - _cur_trv_temp_f) * _valve_fraction
                     )
-                    if (
-                        _valve_fraction == 0.0
-                        and _desired_trv_setpoint >= _cur_trv_temp_f
-                    ):
-                        _desired_trv_setpoint = _cur_trv_temp_f - 1.0
-                    _new_trv_calibration = _current_trv_calibration - (
-                        _desired_trv_setpoint - _cur_target_temp
+                    if _valve_fraction == 0.0:
+                        _new_trv_calibration = (
+                            _cur_target_temp - _cur_trv_temp_f + _calibration_step
+                        )
+                    else:
+                        _new_trv_calibration = _current_trv_calibration - (
+                            _desired_trv_setpoint - _cur_target_temp
                     )
     else:
         self.real_trvs[entity_id].pop("calibration_balance", None)
