@@ -3162,6 +3162,37 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                 # The sensor listens to the climate entity.
                 # So we should call `async_write_ha_state` if we want the sensor to see the new EMA.
                 self.async_write_ha_state()
+
+                # --- single periodic state summary ---
+                _trv_parts = []
+                for _tid, _td in self.real_trvs.items():
+                    _cb = _td.get("calibration_balance") or {}
+                    _trv_parts.append(
+                        "%s cal=%.1f trv=%.1f valve=%s%%"
+                        % (
+                            _tid,
+                            float(_td.get("last_calibration") or 0),
+                            float(_td.get("current_temperature") or 0),
+                            _cb.get("valve_percent", "?"),
+                        )
+                    )
+                _LOGGER.debug(
+                    "better_thermostat %s: STATE cur=%.2f ema=%.2f target=%.1f "
+                    "slope=%.4f action=%s mode=%s call_for_heat=%s window=%s "
+                    "outdoor=%.1f tol=%.1f | %s",
+                    self.device_name,
+                    float(self.cur_temp or 0),
+                    float(self.external_temp_ema or 0),
+                    float(self.bt_target_temp or 0),
+                    float(self.temp_slope or 0),
+                    self.attr_hvac_action,
+                    self.bt_hvac_mode,
+                    self.call_for_heat,
+                    self.window_open,
+                    float(self.last_avg_outdoor_temp or 0),
+                    float(self.tolerance or 0),
+                    " | ".join(_trv_parts) if _trv_parts else "no TRVs",
+                )
             except Exception as e:
                 _LOGGER.error(
                     "better_thermostat %s: error in _async_update_ema_periodic: %s",
