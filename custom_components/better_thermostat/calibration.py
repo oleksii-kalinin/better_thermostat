@@ -603,8 +603,12 @@ def calculate_calibration_local(self, entity_id) -> float | None:
                     )
                     if _valve_fraction == 0.0:
                         # TRV must perceive room >= target to close.
+                        # trv_temp already includes current calibration, so:
+                        # raw_sensor = trv_temp - current_cal
+                        # For close: raw_sensor + new_cal >= target + margin
                         _new_trv_calibration = (
-                            _cur_target_temp - _cur_trv_temp_f + _calibration_step
+                            _cur_target_temp - _cur_trv_temp_f
+                            + _current_trv_calibration + _calibration_step
                         )
                     else:
                         _new_trv_calibration = _current_trv_calibration - (
@@ -625,7 +629,8 @@ def calculate_calibration_local(self, entity_id) -> float | None:
                     )
                     if _valve_fraction == 0.0:
                         _new_trv_calibration = (
-                            _cur_target_temp - _cur_trv_temp_f + _calibration_step
+                            _cur_target_temp - _cur_trv_temp_f
+                            + _current_trv_calibration + _calibration_step
                         )
                     else:
                         _new_trv_calibration = _current_trv_calibration - (
@@ -646,7 +651,8 @@ def calculate_calibration_local(self, entity_id) -> float | None:
                     )
                     if _valve_fraction == 0.0:
                         _new_trv_calibration = (
-                            _cur_target_temp - _cur_trv_temp_f + _calibration_step
+                            _cur_target_temp - _cur_trv_temp_f
+                            + _current_trv_calibration + _calibration_step
                         )
                     else:
                         _new_trv_calibration = _current_trv_calibration - (
