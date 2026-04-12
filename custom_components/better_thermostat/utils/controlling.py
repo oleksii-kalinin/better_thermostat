@@ -589,9 +589,11 @@ async def control_trv(self, heater_entity_id=None):
                 )
 
         # set new calibration offset
+        # NOTE: calibration is also written when mode is OFF to prevent TRVs with
+        # frost protection (e.g. Saswell SEA801/802) from overriding system_mode=off
+        # when a stale negative offset makes them think the room is cold.
         if (
             _calibration is not None
-            and _new_hvac_mode != HVACMode.OFF
             and _calibration_mode != CalibrationMode.NO_CALIBRATION
         ):
             _current_calibration_s = await get_current_offset(self, heater_entity_id)
